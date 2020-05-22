@@ -25,7 +25,8 @@ pipeline {
                                 cd mpich
                                 git checkout $gitBranch
 
-                                test_worker=../jenkins-scripts/test-worker.sh
+                                ln -s ../jenkins-scripts .
+                                test_worker=./jenkins-scripts/test-worker.sh
                                 export compiler=gnu
                                 $test_worker -b $gitBranch -h $WORKSPACE/mpich -c $compiler -o $jenkins_configure -m ch4:ofi
                             '''

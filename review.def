@@ -17,7 +17,8 @@ page: ch4_ofi.groovy
         cd mpich
         git checkout $gitBranch
 
-        test_worker=../jenkins-scripts/test-worker.sh
+        ln -s ../jenkins-scripts .
+        test_worker=./jenkins-scripts/test-worker.sh
 
     subcode: test_worker
         export compiler=gnu
