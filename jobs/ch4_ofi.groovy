@@ -18,12 +18,15 @@ pipeline {
                     stage('Build') {
                         steps {
                             sh '''
-                                git clone https://github.com/hzhou/mpich/ .
-                                git checkout $gitBranch
                             '''
                             copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
-                                ./jenkins-scripts/test-worker.sh -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
+                                git clone https://github.com/hzhou/mpich/ mpich
+                                chdir mpich
+                                git checkout $gitBranch
+
+                                test_worker=../jenkins-scripts/test-worker.sh
+                                $test_worker -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
                             '''
                         }
                     }
