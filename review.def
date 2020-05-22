@@ -12,6 +12,7 @@ page: ch4_ofi.groovy
         copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
 
     subcode: git_clone
+        rm -rf mpich
         git clone $(git_repo) mpich
         cd mpich
         git checkout $gitBranch

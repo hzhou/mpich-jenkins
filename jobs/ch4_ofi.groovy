@@ -21,6 +21,7 @@ pipeline {
                             '''
                             copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
+                                rm -rf mpich
                                 git clone https://github.com/hzhou/mpich/ mpich
                                 cd mpich
                                 git checkout $gitBranch
