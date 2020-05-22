@@ -27,7 +27,8 @@ pipeline {
                                 git checkout $gitBranch
 
                                 test_worker=../jenkins-scripts/test-worker.sh
-                                $test_worker -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
+                                export compiler=gnu
+                                $test_worker -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -m ch4:ofi
                             '''
                         }
                     }
