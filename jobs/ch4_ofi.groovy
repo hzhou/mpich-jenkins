@@ -3,11 +3,10 @@ pipeline {
         string(name: 'gitBranch', defaultValue: 'INVALID', description: '')
     }
 
-    agent { label "centos64_review" }
-
     stages {
         stage('Matrix Build') {
             matrix {
+                agent { label "centos64_review" }
                 axes {
                     axis {
                         name 'jenkins_configure'
@@ -28,7 +27,7 @@ pipeline {
 
                                 test_worker=../jenkins-scripts/test-worker.sh
                                 export compiler=gnu
-                                $test_worker -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -m ch4:ofi
+                                $test_worker -b $gitBranch -h $WORKSPACE/mpich -c $compiler -o $jenkins_configure -m ch4:ofi
                             '''
                         }
                     }

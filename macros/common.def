@@ -3,9 +3,8 @@ subcode: matrix_pipeline(@axis_list)
         &call parameters
             $call string, gitBranch, INVALID
 
-        agent $(agent)
-
         &call matrix
+            agent $(agent)
             &call axes
                 $(for:a in $(axis_list))
                     $call axis, $(a), $($(a))

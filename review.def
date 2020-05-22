@@ -21,7 +21,7 @@ page: ch4_ofi.groovy
 
     subcode: test_worker
         export compiler=gnu
-        $test_worker -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -m ch4:ofi
+        $test_worker -b $gitBranch -h $WORKSPACE/mpich -c $compiler -o $jenkins_configure -m ch4:ofi
 
 
 #---------------------------------------- 
