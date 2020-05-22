@@ -1,0 +1,18 @@
+include: macros/common.def
+
+page: ch4_ofi.groovy
+    &call matrix_pipeline, jenkins_configure
+        &call shell
+            copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
+            $call test_worker
+
+    subcode: test_worker
+        ./jenkins-scripts/test-worker.sh -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
+
+
+#---------------------------------------- 
+macros:
+    git_repo: https://github.com/hzhou/mpich/
+    agent: { label "centos64_review" }
+    jenkins_configure: default, debug, am-only, strict, no-inline, direct-nm, external
+

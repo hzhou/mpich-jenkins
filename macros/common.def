@@ -1,0 +1,76 @@
+subcode: matrix_pipeline(@axis_list)
+    pipeline {
+        &call parameters
+            $call string, gitBranch, INVALID
+
+        agent $(agent)
+
+        &call matrix
+            &call axes
+                $(for:a in $(axis_list))
+                    $call axis, $(a), $($(a))
+            &call build
+                BLOCK
+            $call post
+    }
+
+    subcode: matrix
+        stages {
+            stage('Matrix Build') {
+                matrix {
+                    BLOCK
+                }
+            }
+        }
+        subcode: axes
+            axes {
+                BLOCK
+            }
+            subcode: axis(name, @values)
+                axis {
+                    name '$(name)'
+                    values $(values:quotelist-single)
+                }
+
+#---------------------------------------- 
+subcode: trigger
+
+subcode: build
+    stages {
+        stage('Source') {
+            git url: '$(git_repo)', branch: ${params.gitBranch}
+        }
+        stage('Build') {
+            steps {
+                BLOCK
+            }
+        }
+    }
+
+subcode: post
+    post {
+        always {
+            archiveArtifacts artifacts: 'filtered-make.txt,autogen.log,c.txt,**/config.log,m.txt,mi.txt,test/mpi/summary.junit.xml,apply-xfail.sh,test/mpi/basictypelist.txt'
+            junit 'test/mpi/summary.junit.xml'
+
+            success {
+                slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
+            }
+            failure {
+                slackSend channel: 'hzhou-build', color: 'RED', message: "${currentBuild.fullDisplayName} FAILED."
+            }
+
+        }
+    }
+
+subcode: parameters
+    parameters {
+        BLOCK
+    }
+    subcode: string(name, @default)
+        string(name: '$(name)', defaultValue: '$(default)', description: '')
+
+subcode: shell
+    sh '''
+        BLOCK
+    '''
