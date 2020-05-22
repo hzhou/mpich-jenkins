@@ -13,7 +13,7 @@ page: ch4_ofi.groovy
 
     subcode: git_clone
         git clone $(git_repo) mpich
-        chdir mpich
+        cd mpich
         git checkout $gitBranch
 
         test_worker=../jenkins-scripts/test-worker.sh

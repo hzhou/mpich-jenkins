@@ -22,7 +22,7 @@ pipeline {
                             copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
                                 git clone https://github.com/hzhou/mpich/ mpich
-                                chdir mpich
+                                cd mpich
                                 git checkout $gitBranch
 
                                 test_worker=../jenkins-scripts/test-worker.sh
