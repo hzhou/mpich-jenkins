@@ -38,7 +38,9 @@ subcode: trigger
 subcode: build
     stages {
         stage('Source') {
-            git url: '$(git_repo)', branch: ${params.gitBranch}
+            steps {
+                git url: '$(git_repo)', branch: ${params.gitBranch}
+            }
         }
         stage('Build') {
             steps {

@@ -16,7 +16,9 @@ pipeline {
                 }
                 stages {
                     stage('Source') {
-                        git url: 'https://github.com/hzhou/mpich/', branch: ${params.gitBranch}
+                        steps {
+                            git url: 'https://github.com/hzhou/mpich/', branch: ${params.gitBranch}
+                        }
                     }
                     stage('Build') {
                         steps {
