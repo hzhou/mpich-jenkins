@@ -11,17 +11,18 @@ pipeline {
                 axes {
                     axis {
                         name 'jenkins_configure'
-                        values 'default', 'debug', 'am-only', 'strict', 'no-inline', 'direct-nm', 'external'
+                        values 'default', 'debug'
                     }
                 }
                 stages {
                     stage('Build') {
                         steps {
-                            copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
                                 git clone https://github.com/hzhou/mpich/ .
                                 git checkout $gitBranch
-
+                            '''
+                            copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
+                            sh '''
                                 ./jenkins-scripts/test-worker.sh -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
                             '''
                         }
