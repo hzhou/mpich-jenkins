@@ -2,7 +2,7 @@ subcode: matrix_pipeline(@axis_list)
     pipeline {
         &call parameters
             $call string, gitBranch, INVALID
-
+        agent none
         &call matrix
             agent $(agent)
             &call axes

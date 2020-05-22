@@ -2,7 +2,7 @@ pipeline {
     parameters {
         string(name: 'gitBranch', defaultValue: 'INVALID', description: '')
     }
-
+    agent none
     stages {
         stage('Matrix Build') {
             matrix {
