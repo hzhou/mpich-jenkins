@@ -15,15 +15,13 @@ pipeline {
                     }
                 }
                 stages {
-                    stage('Source') {
-                        steps {
-                            git url: 'https://github.com/hzhou/mpich/', branch: '${params.gitBranch}'
-                        }
-                    }
                     stage('Build') {
                         steps {
+                            copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
-                                copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
+                                git clone https://github.com/hzhou/mpich/ .
+                                git checkout $gitBranch
+
                                 ./jenkins-scripts/test-worker.sh -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
                             '''
                         }

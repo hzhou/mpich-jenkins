@@ -37,11 +37,6 @@ subcode: trigger
 
 subcode: build
     stages {
-        stage('Source') {
-            steps {
-                git url: '$(git_repo)', branch: '${params.gitBranch}'
-            }
-        }
         stage('Build') {
             steps {
                 BLOCK

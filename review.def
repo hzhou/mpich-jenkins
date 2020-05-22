@@ -2,11 +2,14 @@ include: macros/common.def
 
 page: ch4_ofi.groovy
     &call matrix_pipeline, jenkins_configure
+        copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
         &call shell
-            copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
             $call test_worker
 
     subcode: test_worker
+        git clone $(git_repo) .
+        git checkout $gitBranch
+
         ./jenkins-scripts/test-worker.sh -b $gitBranch -h $WORKSPACE -c $compiler -o $jenkins_configure -q $label -m ch4:ofi
 
 
