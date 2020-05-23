@@ -37,14 +37,12 @@ pipeline {
                     always {
                         archiveArtifacts artifacts: '**/config.log'
                         junit '**/summary.junit.xml'
-
-                        success {
-                            slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
-                        }
-                        failure {
-                            slackSend channel: 'hzhou-build', color: 'RED', message: "${currentBuild.fullDisplayName} FAILED."
-                        }
-
+                    }
+                    success {
+                        slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
+                    }
+                    failure {
+                        slackSend channel: 'hzhou-build', color: 'RED', message: "${currentBuild.fullDisplayName} FAILED."
                     }
                 }
             }
