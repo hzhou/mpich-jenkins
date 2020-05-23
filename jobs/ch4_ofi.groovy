@@ -35,8 +35,8 @@ pipeline {
                 }
                 post {
                     always {
-                        archiveArtifacts artifacts: 'filtered-make.txt,autogen.log,c.txt,**/config.log,m.txt,mi.txt,test/mpi/summary.junit.xml,apply-xfail.sh,test/mpi/basictypelist.txt'
-                        junit 'test/mpi/summary.junit.xml'
+                        archiveArtifacts artifacts: '**/config.log'
+                        junit '**/summary.junit.xml'
 
                         success {
                             slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
