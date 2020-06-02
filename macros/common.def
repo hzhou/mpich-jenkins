@@ -1,68 +1,59 @@
-subcode: matrix_pipeline(@axis_list)
-    pipeline {
-        &call parameters
-            $call string, gitBranch, INVALID
-        agent none
-        &call matrix
-            agent $(agent)
-            &call axes
-                $(for:a in $(axis_list))
-                    $call axis, $(a), $($(a))
-            &call build
-                BLOCK
-            $call post
-    }
+subcode: git(repo, branch)
+    git(branch: $(branch), url: $(repo))
 
-    subcode: matrix
-        stages {
-            stage('Matrix Build') {
-                matrix {
-                    BLOCK
-                }
-            }
-        }
-        subcode: axes
-            axes {
-                BLOCK
-            }
-            subcode: axis(name, @values)
-                axis {
-                    name '$(name)'
-                    values $(values:quotelist-single)
-                }
+subcode: git_ghprb
+    git(branch: ghprbSourceBranch, url: ghprbAuthorRepoGitUrl)
+    sh 'git clean -fdx'
 
-#---------------------------------------- 
-subcode: build
-    stages {
-        stage('Build') {
-            steps {
-                BLOCK
-            }
-        }
-    }
+subcode: git_hzhou
+    git(branch: params.gitBranch, url: "https://github.com/hzhou/mpich")
+    sh 'git clean -fdx'
 
-subcode: post
-    post {
-        always {
-            archiveArtifacts artifacts: '**/config.log'
-            junit '**/summary.junit.xml'
-        }
-        success {
-            slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
-        }
-        failure {
-            slackSend channel: 'hzhou-build', color: 'RED', message: "${currentBuild.fullDisplayName} FAILED."
-        }
-    }
+# -------------------
+subcode: copy_jenkins_scripts
+    copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
 
-subcode: parameters
-    parameters {
-        BLOCK
-    }
-    subcode: string(name, @default)
-        string(name: '$(name)', defaultValue: '$(default)', description: '')
-
+# -------------------
 subcode: shell
     sh '''
         BLOCK
     '''
+
+subcode: archive(@files)
+    archiveArtifacts(artifacts: $(files))
+
+subcode: junit(@files)
+    junit($(files))
+
+subcode: slack_send
+    macros:
+        _url:  ${currentBuild.absoluteUrl}
+        _name: ${currentBuild.projectName}
+        _dur: ${currentBuild.durationString}
+        _result: currentBuild.currentResult
+    $(set:msg=<$(_url)|$(_name)> *${$(_result)}* after _$(_dur)_)
+    $(reset:msg.=\nbranch: ${env.GIT_BRANCH})
+    def colors = [SUCCESS:'good', UNSTABLE:'warning', FAILURE:'danger']
+    $(for:a in $(slack_infos))
+        $(reset:msg.=\n$(a))
+    slackSend(channel: 'hzhou-build', color: colors[$(_result)], message: "$(msg)")
+
+#---------------------------------------- 
+subcode: stage(name)
+    $(if:name!~")
+        $(set:name="$(name)")
+    $(if:stage_dir)
+        stage($(name)) {
+            dir("$(stage_dir)") {
+                BLOCK
+            }
+        }
+    $(else)
+        stage($(name)) {
+            BLOCK
+        }
+
+subcode: shell_stage(name)
+    &call stage, $(name)
+        &call shell
+            BLOCK

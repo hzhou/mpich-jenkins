@@ -1,0 +1,98 @@
+#---- branch pipelines ---------------------
+macros:
+    git_repo: https://github.com/hzhou/mpich/
+    build_stage_label: Build
+
+    agent_default: centos64_review
+
+subcode: single_pipeline
+    pipeline {
+        agent { label "${params.label}" }
+        &call parameters
+            $call string, gitBranch, INVALID
+            $call string, label, $(agent_default)
+            $call string, param
+        &call build
+            BLOCK
+        $call post
+    }
+
+subcode: matrix_pipeline(@axis_list)
+    pipeline {
+        &call parameters
+            $call string, gitBranch, INVALID
+        agent none
+        &call matrix
+            agent $(agent)
+            &call axes
+                $(for:a in $(axis_list))
+                    $call axis, $(a), $($(a))
+            &call build
+                BLOCK
+            $call post
+    }
+
+    subcode: matrix
+        stages {
+            stage('Matrix Build') {
+                matrix {
+                    BLOCK
+                }
+            }
+        }
+        subcode: axes
+            axes {
+                BLOCK
+            }
+            subcode: axis(name, @values)
+                axis {
+                    name '$(name)'
+                    values $(values:quotelist-single)
+                }
+
+#---------------------------------------- 
+subcode: build
+    stages {
+        $(if:git_repo)
+            stage('Source') {
+                steps {
+                    $call git, "$(git_repo)", "${params.gitBranch}"
+                }
+            }
+        stage("$(build_stage_label)") {
+            steps {
+                BLOCK
+            }
+        }
+    }
+
+subcode: post
+    post {
+        always {
+            $call archive, '**/config.log'
+            $call junit, '**/summary.junit.xml'
+        }
+        $call slack, success, good
+        $call slack, failure, danger
+        $call slack, unstable, warning
+    }
+    macros:
+        url:  ${currentBuild.absoluteUrl}
+        name: ${currentBuild.projectName}
+        dur: ${currentBuild.durationString}
+    subcode: slack(status, color)
+        $(set:msg=<$(url)|$(name)> *$(status:uc)* after _$(dur)_)
+        $(reset:msg.=\nbranch: ${params.gitBranch})
+        $(for:a in $(slack_infos))
+            $(reset:msg.=\n$(a))
+        $(status) {
+            slackSend channel: 'hzhou-build', color: '$(color)', message: "$(msg)"
+        }
+
+subcode: parameters
+    parameters {
+        BLOCK
+    }
+    subcode: string(name, @default)
+        string(name: '$(name)', defaultValue: '$(default)', description: '')
+

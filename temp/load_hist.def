@@ -1,0 +1,55 @@
+module: perl
+
+page: load_hist
+    arg: ch3-centos64.xml
+    arg: ch4-ofi.xml
+
+    my $junit_xml = $ARGV[0]
+    $call load_time_hash
+    $call get_histgram
+    $call report_histgram
+
+subcode: load_time_hash
+    my %time_hash
+    &call open_r, $junit_xml
+        $if /<testcase name=" - (.*?)" time="(\S+)"/ -> $name, $time
+            $name=~s/\s+$//
+            $time_hash{$name} = $time
+
+
+subcode: get_histgram
+    my $t = 0.1
+    my $N = 10
+    my (@slot_names, @slot_count)
+    $for $i=0:$N
+        $t *= 2
+        $slot_names[$i] = $t 
+        $slot_count[$i] = 0
+    $slot_names[$N] = "above"
+    $slot_count[$N] = 0
+
+    my $total_count = 0
+    $foreach %time_hash
+        $total_count++
+        $if $v <= $slot_names[$N-1]
+            $for $i=0:$N
+                $if $v <= $slot_names[$i]
+                    $slot_count[$i]++
+                    last
+        $else
+            $slot_count[$N]++
+
+subcode: report_histgram
+    my $max_count = 0
+    $foreach $cnt in @slot_count
+        $if $max_count < $cnt
+            $max_count = $cnt
+
+    my $width = 50
+    my $unit = $max_count / $width
+    $for $i=0:$N+1
+        my $n = int($slot_count[$i] / $unit)
+        $if $n * $unit < $slot_count[$i]
+            $n++
+        $print "%8s %-${width}s %6d\n", $slot_names[$i], '-' x $n, $slot_count[$i]
+        

@@ -1,0 +1,51 @@
+macros:
+    default_node: centos64_review
+
+subcode: node_custom(type) # ghprb, branch, params
+    DUMP_STUB GLOBAL
+    &call node, 'master'
+        $call parse_$(type), label, "$(default_node)"
+        &call node, env.label
+            BLOCK
+
+subcode: ghprb_simple
+    DUMP_STUB GLOBAL
+    &call node, "$(default_node)"
+        BLOCK
+
+# -------
+subcode: groovy_parse_param
+    $(if:default!~['"])
+        $(set:default="$(default)")
+    $(block:GLOBAL)
+        @NonCPS
+        def get_$(name)(text) {
+            def m = text =~ /$(name)[:=]\s*(\w+)/
+            m ? m[0][1] : $(default)
+        }
+subcode: parse_ghprb(name, default)
+    $call groovy_parse_param
+    env.$(name) = get_$(name)(ghprbCommentBody)
+
+subcode: parse_branch(name, default)
+    $call groovy_parse_param
+    env.$(name) = get_$(name)(params.param)
+
+#---------------------------------------- 
+subcode: node(agent)
+    node($(agent)) {
+        BLOCK
+    }
+
+#---------------------------------------- 
+subcode: set_mymake
+    env.PMRS = '/nfs/gce/projects/pmrs'
+    env.SCRIPT_DIR = "${env.PMRS}/hzhou/mpich-jenkins-scripts"
+    env.MYMAKE = "${env.PMRS}/hzhou/mymake"
+    env.MODTARBALL = "${env.PMRS}/hzhou/modules.tar.gz"
+
+subcode: set_lib
+    def prefix = "${env.WORKSPACE}/_inst"
+    env.PATH = "${prefix}/bin:${env.PATH}"
+    env.LD_LIBRARY_PATH= "${prefix}/lib:${env.LD_LIBRARY_PATH}"
+    env.CPATH= "${prefix}/include"

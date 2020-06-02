@@ -1,0 +1,80 @@
+include: macros/common.def
+include: macros/script.def
+
+page: quick.groovy
+    default_node: centos07
+    slack_infos: param: ${params.param}
+    &call node_custom, branch
+        $call quick_Setup
+        $call quick_Configure
+
+        &call shell_stage, "Compile"
+            make install
+            make hydra-install
+            make test
+
+        &call shell_stage, "Test"
+            mpicc -o cpi examples/cpi.c
+            mpirun -n 2 ./cpi
+
+            . ./custom_import.sh
+            zsh $SCRIPT_DIR/set-xfail.sh -o $config -q $label -m $netmod -f test/mpi/maint/jenkins/xfail.conf
+            make -C test/mpi testing
+
+        &call stage, "Post"
+            $call archive, "$(archive)"
+            $call junit, "**/summary.junit.xml"
+            $call slack_send
+
+page: warning.groovy
+    default_node: centos07
+    stage_dir: mpich
+    &call node_custom, ghprb
+        $call quick_Setup, ghprb
+        $call quick_Configure
+
+        &call shell_stage, "Compile"
+            . ./custom_import.sh
+            t1=`date +%s`
+            make install 2>&1  | tee -a make.log
+            make hydra-install | tee -a make.log
+            t2=`date +%s`
+            dur=`expr t2 - t1`
+            perl $MYMAKE/report_make_log.pl make.log $compiler $dur
+
+        &call stage, "Post"
+            $call archive, "$(archive)"
+            $call junit, "**/summary.junit.xml"
+
+#---------------------------------------- 
+macros:
+    archive:: config.log, src/include/mpichconf.h, Makefile
+    archive:: mymake/mpl/config.log, mymake/mpl/include/mplconfig.h
+
+subcode: quick_Setup(@type)
+    &call stage, "Setup"
+        $(if:type=ghprb)
+            $call git_ghprb
+        $(else)
+            $call git_hzhou
+        $call set_mymake
+        env.netmod = "ch3"  # default
+        $call @set_compiler
+        $call @set_config
+        $call set_lib
+        &call shell
+            perl $MYMAKE/jenkins_custom.pl
+            cat custom_import.sh
+            printenv | sort
+
+    subcode: set_compiler
+        $call parse_branch, compiler, gcc
+
+    subcode: set_config
+        $call parse_branch, config, default
+
+subcode: quick_Configure
+    &call shell_stage, "Configure"
+        . ./custom_import.sh
+        perl $MYMAKE/mymake.pl --prefix=$PWD/_inst --with-device=$netmod --disable-fortran --disable-romio --enable-g=dbg $config_args
+

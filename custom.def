@@ -1,0 +1,66 @@
+# -- scripted pipeline
+
+include: macros/common.def
+include: macros/script.def
+
+page: review_custom.groovy
+    C: perl $SCRIPT_DIR/custom.pl $SCRIPT_DIR/test-pipeline.sh
+
+    &call node_custom, ghprb
+        &call stage, Setup
+            $call git_ghprb
+            env.PMRS  = '/nfs/gce/projects/pmrs'
+            env.SCRIPT_DIR = "${env.PMRS}/hzhou/mpich-jenkins-scripts"
+            sh 'hostname'
+        &call shell_stage, Autogen
+            PATH=$HOME/software/autotools/bin:$PATH
+            git submodule update --init --recursive
+            ./autogen.sh 2>&1 | tee autogen.log
+        &call shell_stage, Configure
+            $(C) -x configure
+        &call shell_stage, Build
+            make 2>&1 | tee m.txt
+            make install 2>&1 | tee mi.txt
+        &call shell_stage, Testing
+            $(C) -x testing
+        &call stage, Post
+            $call archive, '**/config.log'
+            $call junit, '**/summary.junit.xml'
+
+page: review_asan.groovy
+    &call ghprb_simple
+        &call stage, Setup
+            $call git_ghprb
+            $call set_mymake
+            $call parse_ghprb, netmod, ch3:tcp
+            $call set_asan
+            $call set_lib
+            sh 'printenv'
+        &call shell_stage, Configure
+            perl $MYMAKE/mymake.pl --prefix=$PWD/_inst --with-device=ch3 --disable-fortran --enable-g=dbg --disable-fast
+        &call shell_stage, Compile
+            make install
+            make hydra-install
+            make test
+        &call shell_stage, Test
+            mpicc -o cpi examples/cpi.c
+            mpirun -n 2 ./cpi | tee -a asan.log || :
+
+            zsh $SCRIPT_DIR/set-xfail.sh -j asan -c clang -o asan -q centos64 -m $netmod -f test/mpi/maint/jenkins/xfail.conf
+            make -C test/mpi testing | tee -a asan.log || :
+
+        &call stage, Post
+            &call shell
+                perl $MYMAKE/report_make_log.pl asan.log clang 0
+            $call archive, "asan.log"
+            $call junit, "**/summary.junit.xml"
+
+    subcode: set_asan
+        env.PATH = "${env.PMRS}/opt/clang-8/bin:${env.PATH}"
+        env.LD_LIBRARY_PATH = "${env.PMRS}/opt/gcc-8/lib64:${env.LD_LIBRARY_PATH}"
+        env.CC = "clang"
+        env.CXX = "clang++"
+        env.CFLAGS = "-fsanitize=address -fno-omit-frame-pointer"
+        env.CXXFLAGS = "-fsanitize=address -fno-omit-frame-pointer"
+        env.LDFLAGS = "-fsanitize=address"
+

@@ -6,43 +6,43 @@ pipeline {
     stages {
         stage('Matrix Build') {
             matrix {
-                agent { label "centos64_review" }
+                agent centos64_review
                 axes {
                     axis {
-                        name 'jenkins_configure'
-                        values 'default', 'debug'
+                        name 'config'
+                        values 'default', 'debug', 'am-only', 'strict', 'no-inline', 'direct-nm', 'external'
                     }
                 }
                 stages {
-                    stage('Build') {
+                    stage('Source') {
                         steps {
-                            sh '''
-                            '''
+                            git(branch: "${params.gitBranch}", url: "https://github.com/hzhou/mpich/")
+                        }
+                    }
+                    stage("${params.config}") {
+                        steps {
                             copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
                             sh '''
-                                rm -rf mpich
-                                git clone https://github.com/hzhou/mpich/ mpich
-                                cd mpich
-                                git checkout $gitBranch
-
-                                ln -s ../jenkins-scripts .
-                                test_worker=./jenkins-scripts/test-worker.sh
-                                export compiler=gnu
-                                $test_worker -b $gitBranch -h $WORKSPACE/mpich -c $compiler -o $jenkins_configure -m ch4:ofi
+                                test_worker="jenkins-scripts/test-worker.sh"
+                                netmod="ch4:ofi"
+                                $test_worker -b $gitBranch -h $WORKSPACE -o $config -m $netmod
                             '''
                         }
                     }
                 }
                 post {
                     always {
-                        archiveArtifacts artifacts: '**/config.log'
-                        junit '**/summary.junit.xml'
+                        archiveArtifacts(artifacts: '**/config.log')
+                        junit('**/summary.junit.xml')
                     }
                     success {
-                        slackSend channel: 'hzhou-build', color: 'good', message: "${currentBuild.fullDisplayName} completed successfully."
+                        slackSend channel: 'hzhou-build', color: 'good', message: "<${currentBuild.absoluteUrl}|${currentBuild.projectName}> *SUCCESS* after _${currentBuild.durationString}_\nbranch: ${params.gitBranch}\nconfig: ${params.config}"
                     }
                     failure {
-                        slackSend channel: 'hzhou-build', color: 'RED', message: "${currentBuild.fullDisplayName} FAILED."
+                        slackSend channel: 'hzhou-build', color: 'danger', message: "<${currentBuild.absoluteUrl}|${currentBuild.projectName}> *FAILURE* after _${currentBuild.durationString}_\nbranch: ${params.gitBranch}\nconfig: ${params.config}"
+                    }
+                    unstable {
+                        slackSend channel: 'hzhou-build', color: 'warning', message: "<${currentBuild.absoluteUrl}|${currentBuild.projectName}> *UNSTABLE* after _${currentBuild.durationString}_\nbranch: ${params.gitBranch}\nconfig: ${params.config}"
                     }
                 }
             }

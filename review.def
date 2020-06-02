@@ -1,34 +1,64 @@
 include: macros/common.def
+include: macros/declare.def
 
 page: ch4_ofi.groovy
-    &call matrix_pipeline, jenkins_configure
+    netmod: ch4:ofi
+    build_stage_label: ${params.config}
+    slack_infos: config: ${params.config}
+
+    $call test_pipeline, $(ch4_ofi_configs)
+
+page: ch4_ucx.groovy
+    netmod: ch4:ofi
+    build_stage_label: ${params.config}
+    slack_infos: config: ${params.config}
+
+    $call test_pipeline, $(ch4_ucx_configs)
+
+#---------------------------------------- 
+page: ch3_tcp.groovy
+    netmod: ch3:tcp
+    build_stage_label: ${params.config}
+    slack_infos: config: ${params.config}
+
+    $call test_pipeline, $(label_list)
+
+page: ch3_sock.groovy
+    netmod: ch3:sock
+    build_stage_label: ${params.config}
+    slack_infos: config: ${params.config}
+
+    $call test_pipeline, $(label_list)
+
+page: custom.groovy
+    slack_infos: param: ${params.param}
+
+    &call single_pipeline
+        $call copy_jenkins_scripts
         &call shell
-        $call copy_artifacts
-        &call shell
-            $call git_clone
-            $call test_worker
-
-    subcode: copy_artifacts
-        copyArtifacts(projectName: 'mpich-jenkins-scripts', target: 'jenkins-scripts')
-
-    subcode: git_clone
-        rm -rf mpich
-        git clone $(git_repo) mpich
-        cd mpich
-        git checkout $gitBranch
-
-        ln -s ../jenkins-scripts .
-        test_worker=./jenkins-scripts/test-worker.sh
-
-    subcode: test_worker
-        export compiler=gnu
-        $test_worker -b $gitBranch -h $WORKSPACE/mpich -c $compiler -o $jenkins_configure -m ch4:ofi
-
+            export PMRS=/nfs/gce/projects/pmrs
+            export GIT_BRANCH=$gitBranch
+            perl jenkins-scripts/custom.pl ./jenkins-scripts/test-worker.sh
 
 #---------------------------------------- 
 macros:
-    git_repo: https://github.com/hzhou/mpich/
-    agent: { label "centos64_review" }
-    # jenkins_configure: default, debug, am-only, strict, no-inline, direct-nm, external
-    jenkins_configure: default, debug
+    # -- per-netmod-review macros
+    label_list: centos64_review, centos32, freebsd64, osx, solaris
+    ch4_ofi_configs: default, debug, am-only, strict, no-inline, direct-nm, external
+    ch4_ucx_configs: default, debug, am-only, strict, no-inline, external, hcoll
+
+subcode: test_pipeline(@config)
+    $(if:config~centos)
+        $(set:agent={ label "${params.config}" })
+    $(else)
+        $(set:agent=centos64_review)
+    &call matrix_pipeline, config
+        $call copy_jenkins_scripts
+        &call shell
+            $call test_worker
+
+    subcode: test_worker
+        test_worker="jenkins-scripts/test-worker.sh"
+        netmod="$(netmod)"
+        $test_worker -b $gitBranch -h $WORKSPACE -o $config -m $netmod
 
