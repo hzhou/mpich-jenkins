@@ -55,7 +55,7 @@ node('master') {
                     make install 2>&1  | tee -a make.log
                     make hydra-install | tee -a make.log
                     t2=`date +%s`
-                    dur=`expr t2 - t1`
+                    dur=`expr $t2 - $t1`
                     perl $MYMAKE/report_make_log.pl make.log $compiler $dur
                 '''
             }
